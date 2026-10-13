@@ -1,0 +1,41 @@
+name: Validate update feed
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON
+        run: python3 -m json.tool update-manifest.json >/dev/null
+      - name: Validate safety state
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          m = json.loads(Path("update-manifest.json").read_text())
+          assert m["schema"] == 1
+          assert m["channel"] == "stable"
+
+          if m.get("published"):
+              for name in ("prochord", "receiver"):
+                  a = m["artifacts"][name]
+                  assert a["url"].startswith("https://")
+                  assert len(a["sha256"]) == 64
+                  assert a.get("size", 0) > 0
+          else:
+              print("Feed is unpublished; no installed app should offer an update.")
+          PY
+      - name: Validate appcast XML
+        run: python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          ET.parse("appcast.xml")
+          print("appcast.xml is valid XML")
+          PY
