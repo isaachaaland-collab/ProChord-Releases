@@ -12,9 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Validate JSON
         run: python3 -m json.tool update-manifest.json >/dev/null
+
       - name: Validate safety state
+        shell: bash
         run: |
           python3 - <<'PY'
           import json
@@ -33,9 +36,13 @@ jobs:
           else:
               print("Feed is unpublished; no installed app should offer an update.")
           PY
+
       - name: Validate appcast XML
-        run: python3 - <<'PY'
+        shell: bash
+        run: |
+          python3 - <<'PY'
           import xml.etree.ElementTree as ET
+
           ET.parse("appcast.xml")
           print("appcast.xml is valid XML")
           PY
